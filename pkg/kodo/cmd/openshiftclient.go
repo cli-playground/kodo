@@ -11,7 +11,7 @@ var (
 	Bearertoken string
 )
 
-func newOpenShiftClient() *kubernetes.Clientset {
+func newOpenShiftClient() (*kubernetes.Clientset, error) {
 	config := rest.Config{
 		Host:        Host,
 		BearerToken: Bearertoken,
@@ -19,7 +19,7 @@ func newOpenShiftClient() *kubernetes.Clientset {
 			Insecure: true,
 		},
 	}
-	myClientSet, _ := kubernetes.NewForConfig(&config)
+	myClientSet, clientsetError := kubernetes.NewForConfig(&config)
 
-	return myClientSet
+	return myClientSet, clientsetError
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/cli-playground/kodo/pkg/kodo/cmd"
 	"github.com/spf13/cobra"
@@ -23,19 +24,21 @@ func init() {
 	rcommand.AddCommand(listCommand)
 	rcommand.PersistentFlags().StringVarP(&cmd.Host, "server", "s", "myurl", "this is the cluster url")
 	rcommand.PersistentFlags().StringVarP(&cmd.Bearertoken, "token", "t", "usertoken", "this is the user token")
-	rcommand.PersistentFlags().StringVarP(&cmd.Namespace, "namespace", "n", "namespace", "this is the namespace")
+	rcommand.PersistentFlags().StringVarP(&cmd.Namespace, "namespace", "n", "", "this is the namespace")
 	rcommand.MarkFlagRequired("server")
 }
 
 func main() {
+	argsWithProg := os.Args
+	fmt.Println(argsWithProg)
 	rcommand.Execute()
 }
 
 var listCommand = &cobra.Command{
 	Use: "list",
 	Run: func(cm *cobra.Command, args []string) {
-		fmt.Println("List All Kubernetes Applications")
-		fmt.Printf("Fetching all applications from %s in namespace %s", cmd.Host, cmd.Namespace)
+		fmt.Println("\nList All Kubernetes Applications")
+		fmt.Printf("\nFetching all applications from %s in namespace %s", cmd.Host, cmd.Namespace)
 		cmd.List()
 
 	},
