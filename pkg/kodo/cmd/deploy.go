@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -59,7 +60,7 @@ func Deploy(deployVar *DeploymentVariables, envVar *EnvironmentVariables) error 
 			},
 		},
 	}
-	_, deploymentError := client.AppsV1().Deployments(envVar.Namespace).Create(deploymentObj)
+	_, deploymentError := client.AppsV1().Deployments(envVar.Namespace).Create(context.TODO(), deploymentObj, metav1.CreateOptions{})
 
 	if deploymentError == nil {
 		fmt.Printf("\nDeployment created")
