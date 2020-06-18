@@ -61,5 +61,7 @@ var deployCommand = &cobra.Command{
 	Run: func(cm *cobra.Command, args []string) {
 		fmt.Println("Creating image deployment")
 		cmd.Deploy(deployVar, envVar)
+		serviceObj, _ := cmd.Service(deployVar, envVar)
+		cmd.Route(deployVar, envVar, serviceObj)
 	},
 }
