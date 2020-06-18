@@ -8,14 +8,20 @@ import (
 )
 
 //List is a function to list number of pods in the cluster
-//List
-func List() error {
-	client, clientError := newOpenShiftClient()
+func List(envVar *EnvironmentVariables) error {
+	client, clientError := newOpenShiftClient(envVar)
 
 	if clientError != nil {
 		log.Fatal(clientError)
+		return clientError
 	}
-	pods, podlisterror := client.CoreV1().Pods(Namespace).List(v1.ListOptions{})
-	fmt.Printf("\nThe number of pods are %d \n", len(pods.Items))
+	pods, podlisterror := client.CoreV1().Pods(envVar.Namespace).List(v1.ListOptions{})
+
+	if podlisterror == nil {
+		fmt.Printf("\nThe number of pods are %d \n", len(pods.Items))
+	} else {
+		log.Fatal(podlisterror)
+	}
+
 	return podlisterror
 }
