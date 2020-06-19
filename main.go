@@ -25,6 +25,8 @@ func init() {
 	rcommand.PersistentFlags().StringVarP(&cmd.Bearertoken, "token", "t", "usertoken", "this is the user token")
 	rcommand.PersistentFlags().StringVarP(&cmd.Namespace, "namespace", "n", "namespace", "this is the namespace")
 	rcommand.MarkFlagRequired("server")
+	rcommand.AddCommand(buildCommand)
+	rcommand.PersistentFlags().StringVarP(&cmd.Source, "source", "r", "github.com", "github repo which has docker image")
 }
 
 func main() {
@@ -37,6 +39,13 @@ var listCommand = &cobra.Command{
 		fmt.Println("List All Kubernetes Applications")
 		fmt.Printf("Fetching all applications from %s in namespace %s", cmd.Host, cmd.Namespace)
 		cmd.List()
+	},
+}
 
+var buildCommand = &cobra.Command{
+	Use: "build",
+	Run: func(cm *cobra.Command, args []string) {
+		fmt.Println("Building image from docker file at source")
+		cmd.Build()
 	},
 }
