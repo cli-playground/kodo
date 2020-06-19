@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/cli-playground/kodo/pkg/kodo/cmd"
 	"github.com/spf13/cobra"
@@ -60,6 +61,23 @@ var deployCommand = &cobra.Command{
 	Use: "deploy",
 	Run: func(cm *cobra.Command, args []string) {
 		fmt.Println("Creating image deployment")
-		cmd.Deploy(deployVar, envVar)
+
+		deploymentID := cmd.GenerateUniqueIdentifiers()
+
+		deployError := cmd.Deploy(deployVar, envVar, deploymentID)
+		if deployError != nil {
+			log.Fatal(deployError)
+		} else {
+			serviceObj, serviceObjError := cmd.Service(deployVar, envVar, deploymentID)
+			if serviceObjError != nil {
+				log.Fatal(serviceObjError)
+			} else {
+				routeError := cmd.Route(deployVar, envVar, serviceObj, deploymentID)
+				if routeError != nil {
+					log.Fatal(routeError)
+				}
+			}
+		}
+
 	},
 }
