@@ -23,8 +23,10 @@ var versionCommand = &cobra.Command{
 
 func init() {
 	rcommand.AddCommand(versionCommand)
-	rcommand.AddCommand(listCommand)
+	rcommand.AddCommand(countCommand)
+	countCommand.AddCommand(podCommand)
 	rcommand.AddCommand(deployCommand)
+
 	rcommand.PersistentFlags().StringVarP(&envVar.Host, "server", "s", "myurl", "this is the cluster url")
 	rcommand.PersistentFlags().StringVarP(&envVar.Bearertoken, "token", "t", "usertoken", "this is the user token")
 	rcommand.PersistentFlags().StringVarP(&envVar.Namespace, "namespace", "n", "", "this is the namespace")
@@ -46,13 +48,17 @@ func main() {
 	rcommand.Execute()
 }
 
-var listCommand = &cobra.Command{
-	Use: "list",
+var countCommand = &cobra.Command{
+	Use:   "count",
+	Short: "Command to count <resources>",
+}
+
+var podCommand = &cobra.Command{
+	Use: "pods",
 	Run: func(cm *cobra.Command, args []string) {
 		fmt.Println("List All Kubernetes Applications")
 		fmt.Printf("\nFetching all applications from %s in namespace %s", envVar.Host, envVar.Namespace)
 		cmd.List(envVar)
-
 	},
 }
 
