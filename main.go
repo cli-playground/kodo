@@ -64,17 +64,23 @@ var deployCommand = &cobra.Command{
 
 		deploymentID := cmd.GenerateUniqueIdentifiers()
 
-		deployError := cmd.Deploy(deployVar, envVar, deploymentID)
-		if deployError != nil {
-			log.Fatal(deployError)
+		client, clientError := cmd.NewOpenShiftClient(envVar)
+
+		if clientError != nil {
+			log.Fatal(clientError)
 		} else {
-			serviceObj, serviceObjError := cmd.Service(deployVar, envVar, deploymentID)
-			if serviceObjError != nil {
-				log.Fatal(serviceObjError)
+			_, deployError := cmd.Deploy(client, deployVar, envVar, deploymentID)
+			if deployError != nil {
+				log.Fatal(deployError)
 			} else {
-				routeError := cmd.Route(deployVar, envVar, serviceObj, deploymentID)
-				if routeError != nil {
-					log.Fatal(routeError)
+				serviceObj, serviceObjError := cmd.Service(client, deployVar, envVar, deploymentID)
+				if serviceObjError != nil {
+					log.Fatal(serviceObjError)
+				} else {
+					_, routeError := cmd.Route(client, deployVar, envVar, serviceObj, deploymentID)
+					if routeError != nil {
+						log.Fatal(routeError)
+					}
 				}
 			}
 		}

@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/dchest/uniuri"
@@ -12,8 +11,9 @@ import (
 	appsv1 "k8s.io/api/apps/v1" //  alias this as appsv1
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
-	intstr1 "k8s.io/apimachinery/pkg/util/intstr"
+	intstr "k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/kubernetes"
+
 	"k8s.io/client-go/rest"
 )
 
@@ -24,131 +24,52 @@ type DeploymentVariables struct { //New struct for deployment creation variables
 }
 
 type DeploymentIdentifiers struct { //New struct to hold unique identifiers for deployment/service/route
-	DeploymentName string
-	ContainerName  string
-	ServiceName    string
-	RouteName      string
+	DeploymentIdentifierName string
 }
 
 func GenerateUniqueIdentifiers() *DeploymentIdentifiers { // function to generate unique strings and put them in a struct
 	deploymentIDs := DeploymentIdentifiers{
-		DeploymentName: strings.ToLower(uniuri.New()),
-		ContainerName:  strings.ToLower(uniuri.New()),
-		ServiceName:    strings.ToLower(uniuri.New()),
-		RouteName:      strings.ToLower(uniuri.New()),
+		DeploymentIdentifierName: strings.ToLower(uniuri.New()),
 	}
 
 	return &deploymentIDs
 }
 
-func Deploy(deployVar *DeploymentVariables, envVar *EnvironmentVariables, deploymentID *DeploymentIdentifiers) error {
-
-	client, clientError := newOpenShiftClient(envVar)
-
-	if clientError != nil {
-		log.Fatal(clientError)
-		return clientError
-	}
+func Deploy(client *kubernetes.Clientset, deployVar *DeploymentVariables, envVar *EnvironmentVariables, deploymentID *DeploymentIdentifiers) (*appsv1.Deployment, error) {
 
 	deploymentObj := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: deploymentID.DeploymentName,
-		},
-		Spec: appsv1.DeploymentSpec{
-			Replicas: &deployVar.Replicas,
-			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"app": deploymentID.DeploymentName,
-				},
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						"app": deploymentID.DeploymentName,
-					},
-				},
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{
-							Name:  deploymentID.ContainerName,
-							Image: deployVar.Image, // should come from flag
-							Ports: []corev1.ContainerPort{
-								{
-									Name:          "http",
-									Protocol:      corev1.ProtocolTCP,
-									ContainerPort: deployVar.Port, // should come from flag
-								},
-							},
-						},
-					},
-				},
-			},
-		},
+		ObjectMeta: ObjectMeta(deploymentID.DeploymentIdentifierName),
+		Spec:       DeploymentSpec(deployVar.Replicas, deploymentID.DeploymentIdentifierName, deployVar.Image, deployVar.Port),
 	}
-	_, deploymentError := client.AppsV1().Deployments(envVar.Namespace).Create(context.TODO(), deploymentObj, metav1.CreateOptions{})
+	deploymentPointer, deploymentError := client.AppsV1().Deployments(envVar.Namespace).Create(context.TODO(), deploymentObj, metav1.CreateOptions{})
 
 	if deploymentError == nil {
 		fmt.Printf("\nDeployment created")
 	}
 
-	return deploymentError
+	return deploymentPointer, deploymentError
 
 }
 
-func Service(deployVar *DeploymentVariables, envVar *EnvironmentVariables, deploymentID *DeploymentIdentifiers) (*corev1.Service, error) {
+func Service(client *kubernetes.Clientset, deployVar *DeploymentVariables, envVar *EnvironmentVariables, deploymentID *DeploymentIdentifiers) (*corev1.Service, error) {
 
-	client, clientError := newOpenShiftClient(envVar)
-
-	if clientError != nil {
-		log.Fatal(clientError)
-		return nil, clientError
-	}
 	svc := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: deploymentID.ServiceName,
-		},
-		Spec: corev1.ServiceSpec{
-			Ports: []corev1.ServicePort{
-				{
-					Port:       80, // use correct datatype, hint: int32
-					Protocol:   corev1.ProtocolTCP,
-					TargetPort: intstr1.FromInt(int(deployVar.Port)), // port is to be obtained from the command flag.
-				},
-			},
-			Selector: map[string]string{
-				"app": deploymentID.DeploymentName,
-			},
-		},
+		ObjectMeta: ObjectMeta(deploymentID.DeploymentIdentifierName),
+		Spec:       ServiceSpec(deployVar.Port, deploymentID.DeploymentIdentifierName),
 	}
-	_, serviceError := client.CoreV1().Services(envVar.Namespace).Create(context.TODO(), svc, metav1.CreateOptions{})
+	servicePointer, serviceError := client.CoreV1().Services(envVar.Namespace).Create(context.TODO(), svc, metav1.CreateOptions{})
 	if serviceError == nil {
 		fmt.Printf("\nService created")
 	}
-	return svc, serviceError
+	return servicePointer, serviceError
 
 }
 
-func Route(deployVar *DeploymentVariables, envVar *EnvironmentVariables, svc *corev1.Service, deploymentID *DeploymentIdentifiers) error {
-
-	_, clientError := newOpenShiftClient(envVar)
-
-	if clientError != nil {
-		return clientError
-	}
+func Route(client *kubernetes.Clientset, deployVar *DeploymentVariables, envVar *EnvironmentVariables, svc *corev1.Service, deploymentID *DeploymentIdentifiers) (*routev1.Route, error) {
 
 	routeObj := &routev1.Route{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: deploymentID.RouteName,
-		},
-		Spec: routev1.RouteSpec{
-			To: routev1.RouteTargetReference{
-				Kind: "Service",
-				Name: svc.Name,
-			},
-			Port: &routev1.RoutePort{
-				TargetPort: intstr.IntOrString{IntVal: deployVar.Port}, // conventionalPort is 80
-			},
-		},
+		ObjectMeta: ObjectMeta(deploymentID.DeploymentIdentifierName),
+		Spec:       RouteSpec(deployVar.Port, svc.Name),
 	}
 
 	config := rest.Config{
@@ -162,12 +83,100 @@ func Route(deployVar *DeploymentVariables, envVar *EnvironmentVariables, svc *co
 	routeClient, routev1ClientError := routev1client.NewForConfig(&config)
 
 	if routev1ClientError != nil {
-		return routev1ClientError
+		return nil, routev1ClientError
 	}
 
-	_, routeClientError := routeClient.Routes(envVar.Namespace).Create(context.TODO(), routeObj, metav1.CreateOptions{})
+	routePointer, routeClientError := routeClient.Routes(envVar.Namespace).Create(context.TODO(), routeObj, metav1.CreateOptions{})
 	if routeClientError == nil {
 		fmt.Printf("\nRoute created")
 	}
-	return routeClientError
+	return routePointer, routeClientError
+}
+
+func ObjectMeta(resourceName string) metav1.ObjectMeta {
+	ObjectMeta := metav1.ObjectMeta{
+		Name: resourceName,
+	}
+	return ObjectMeta
+}
+
+func DeploymentSpec(Replicas int32, DeploymentIdentifierName string, Image string, Port int32) appsv1.DeploymentSpec {
+	Spec := appsv1.DeploymentSpec{
+		Replicas: &Replicas,
+		Selector: &metav1.LabelSelector{
+			MatchLabels: map[string]string{
+				"app": DeploymentIdentifierName,
+			},
+		},
+		Template: DeploymentTemplate(DeploymentIdentifierName, Image, Port),
+	}
+
+	return Spec
+}
+
+func DeploymentTemplate(DeploymentIdentifierName string, Image string, Port int32) corev1.PodTemplateSpec {
+	Template := corev1.PodTemplateSpec{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: map[string]string{
+				"app": DeploymentIdentifierName,
+			},
+		},
+		Spec: DeploymentTemplateSpec(DeploymentIdentifierName, Image, Port),
+	}
+
+	return Template
+}
+
+func DeploymentTemplateSpec(DeploymentIdentifierName string, Image string, Port int32) corev1.PodSpec {
+
+	Spec := corev1.PodSpec{
+		Containers: []corev1.Container{
+			{
+				Name:  DeploymentIdentifierName,
+				Image: Image, // should come from flag
+				Ports: []corev1.ContainerPort{
+					{
+						Name:          "http",
+						Protocol:      corev1.ProtocolTCP,
+						ContainerPort: Port, // should come from flag
+					},
+				},
+			},
+		},
+	}
+
+	return Spec
+}
+
+func ServiceSpec(Port int32, DeploymentIdentifierName string) corev1.ServiceSpec {
+
+	Spec := corev1.ServiceSpec{
+		Ports: []corev1.ServicePort{
+			{
+				Port:       80, // use correct datatype, hint: int32
+				Protocol:   corev1.ProtocolTCP,
+				TargetPort: intstr.FromInt(int(Port)), // port is to be obtained from the command flag.
+			},
+		},
+		Selector: map[string]string{
+			"app": DeploymentIdentifierName,
+		},
+	}
+
+	return Spec
+}
+
+func RouteSpec(Port int32, DeploymentIdentifierName string) routev1.RouteSpec {
+
+	Spec := routev1.RouteSpec{
+		To: routev1.RouteTargetReference{
+			Kind: "Service",
+			Name: DeploymentIdentifierName,
+		},
+		Port: &routev1.RoutePort{
+			TargetPort: intstr.IntOrString{IntVal: Port}, // conventionalPort is 80
+		},
+	}
+
+	return Spec
 }

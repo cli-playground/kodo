@@ -13,7 +13,7 @@ type EnvironmentVariables struct {
 	Bearertoken string
 }
 
-func newOpenShiftClient(envVar *EnvironmentVariables) (*kubernetes.Clientset, error) {
+func NewOpenShiftClient(envVar *EnvironmentVariables) (*kubernetes.Clientset, error) {
 	config := rest.Config{
 		Host:        envVar.Host,
 		BearerToken: envVar.Bearertoken,
