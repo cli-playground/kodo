@@ -5,22 +5,22 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-var (
+/* modified variables to be inside a struct instead, and using references to instances of struct
+   to access them in order to avoid using global variables */
+type EnvironmentVariables struct {
 	Host        string
 	Namespace   string
 	Bearertoken string
 	Source      string
-)
+}
 
-func newOpenShiftClient() *kubernetes.Clientset {
+func newOpenShiftClient(envVar *EnvironmentVariables) (*kubernetes.Clientset, error) {
 	config := rest.Config{
-		Host:        Host,
-		BearerToken: Bearertoken,
+		Host:        envVar.Host,
+		BearerToken: envVar.Bearertoken,
 		TLSClientConfig: rest.TLSClientConfig{
 			Insecure: true,
 		},
 	}
-	myClientSet, _ := kubernetes.NewForConfig(&config)
-
-	return myClientSet
+	return kubernetes.NewForConfig(&config)
 }

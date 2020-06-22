@@ -65,17 +65,17 @@ func createBuildConfig(sourceUrl string) buildv1api.BuildConfig {
 	}
 }
 
-func createImageStream() imagev1api.ImageStream {
+func createImageStream(envVar *EnvironmentVariables) imagev1api.ImageStream {
 	return imagev1api.ImageStream{
 		TypeMeta:   createTypeMeta("ImageStream", "image.openshift.io/v1"),
-		ObjectMeta: createObjectType("my-ruby-image", "test-kanika"),
+		ObjectMeta: createObjectType("my-ruby-image", envVar.Namespace),
 	}
 }
 
-func newImageStreamClient() *imagev1clientapi.ImageV1Client {
+func newImageStreamClient(envVar *EnvironmentVariables) *imagev1clientapi.ImageV1Client {
 	config := rest.Config{
-		Host:        Host,
-		BearerToken: Bearertoken,
+		Host:        envVar.Host,
+		BearerToken: envVar.Bearertoken,
 		TLSClientConfig: rest.TLSClientConfig{
 			Insecure: true,
 		},
@@ -83,10 +83,10 @@ func newImageStreamClient() *imagev1clientapi.ImageV1Client {
 	myClientSet, _ := imagev1clientapi.NewForConfig(&config)
 	return myClientSet
 }
-func newBuildConfigClient() *buildv1clientapi.BuildV1Client {
+func newBuildConfigClient(envVar *EnvironmentVariables) *buildv1clientapi.BuildV1Client {
 	config := rest.Config{
-		Host:        Host,
-		BearerToken: Bearertoken,
+		Host:        envVar.Host,
+		BearerToken: envVar.Bearertoken,
 		TLSClientConfig: rest.TLSClientConfig{
 			Insecure: true,
 		},
@@ -96,15 +96,15 @@ func newBuildConfigClient() *buildv1clientapi.BuildV1Client {
 }
 
 //Build image from dockerfile at github source
-func Build() error {
-	buildclient := newBuildConfigClient()
-	buildconfig := createBuildConfig(Source)
+func Build(envVar *EnvironmentVariables) error {
+	buildclient := newBuildConfigClient(envVar)
+	buildconfig := createBuildConfig(envVar.Source)
 
-	imagestreamclient := newImageStreamClient()
-	imagestream := createImageStream()
+	imagestreamclient := newImageStreamClient(envVar)
+	imagestream := createImageStream(envVar)
 
-	_, imgerr := imagestreamclient.ImageStreams(Namespace).Create(context.TODO(), &imagestream, metav1.CreateOptions{})
-	_, builderr := buildclient.BuildConfigs(Namespace).Create(context.TODO(), &buildconfig, metav1.CreateOptions{})
+	_, imgerr := imagestreamclient.ImageStreams(envVar.Namespace).Create(context.TODO(), &imagestream, metav1.CreateOptions{})
+	_, builderr := buildclient.BuildConfigs(envVar.Namespace).Create(context.TODO(), &buildconfig, metav1.CreateOptions{})
 
 	if imgerr != nil {
 		return imgerr
