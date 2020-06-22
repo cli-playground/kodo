@@ -9,6 +9,7 @@ var (
 	Host        string
 	Namespace   string
 	Bearertoken string
+	Source      string
 )
 
 func newOpenShiftClient() *kubernetes.Clientset {

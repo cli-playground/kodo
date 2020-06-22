@@ -46,6 +46,11 @@ var buildCommand = &cobra.Command{
 	Use: "build",
 	Run: func(cm *cobra.Command, args []string) {
 		fmt.Println("Building image from docker file at source")
-		cmd.Build()
+		err := cmd.Build()
+		if err == nil {
+			fmt.Println("Build Over")
+		} else {
+			fmt.Println(err)
+		}
 	},
 }

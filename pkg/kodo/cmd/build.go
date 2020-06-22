@@ -15,10 +15,6 @@ import (
 	imagev1clientapi "github.com/openshift/client-go/image/clientset/versioned/typed/image/v1"
 )
 
-var (
-	Source string
-)
-
 func createTypeMeta(kind string, APIVersion string) metav1.TypeMeta {
 	return metav1.TypeMeta{
 		Kind:       kind,
@@ -61,18 +57,18 @@ func createBuildSpec(uri string) buildv1api.BuildConfigSpec {
 	}
 }
 
-func createBuildConfig() buildv1api.BuildConfig {
+func createBuildConfig(sourceUrl string) buildv1api.BuildConfig {
 	return buildv1api.BuildConfig{
 		TypeMeta:   createTypeMeta("BuildConfig", "build.openshift.io/v1"),
 		ObjectMeta: createObjectType("my-app-docker-build", ""),
-		Spec:       createBuildSpec(Source),
+		Spec:       createBuildSpec(sourceUrl),
 	}
 }
 
 func createImageStream() imagev1api.ImageStream {
 	return imagev1api.ImageStream{
 		TypeMeta:   createTypeMeta("ImageStream", "image.openshift.io/v1"),
-		ObjectMeta: createObjectType("my-ruby-image", "NAMESPACE"),
+		ObjectMeta: createObjectType("my-ruby-image", "test-kanika"),
 	}
 }
 
@@ -100,9 +96,9 @@ func newBuildConfigClient() *buildv1clientapi.BuildV1Client {
 }
 
 //Build image from dockerfile at github source
-func Build() (error, error) {
+func Build() error {
 	buildclient := newBuildConfigClient()
-	buildconfig := createBuildConfig()
+	buildconfig := createBuildConfig(Source)
 
 	imagestreamclient := newImageStreamClient()
 	imagestream := createImageStream()
@@ -110,5 +106,11 @@ func Build() (error, error) {
 	_, imgerr := imagestreamclient.ImageStreams(Namespace).Create(context.TODO(), &imagestream, metav1.CreateOptions{})
 	_, builderr := buildclient.BuildConfigs(Namespace).Create(context.TODO(), &buildconfig, metav1.CreateOptions{})
 
-	return imgerr, builderr
+	if imgerr != nil {
+		return imgerr
+	}
+	if builderr != nil {
+		return builderr
+	}
+	return nil
 }
