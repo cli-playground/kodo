@@ -96,9 +96,9 @@ func newBuildConfigClient(envVar *EnvironmentVariables) *buildv1clientapi.BuildV
 }
 
 //Build image from dockerfile at github source
-func Build(envVar *EnvironmentVariables) error {
+func Build(envVar *EnvironmentVariables, deployVar *DeploymentVariables) error {
 	buildclient := newBuildConfigClient(envVar)
-	buildconfig := createBuildConfig(envVar.Source)
+	buildconfig := createBuildConfig(deployVar.Source)
 
 	imagestreamclient := newImageStreamClient(envVar)
 	imagestream := createImageStream(envVar)

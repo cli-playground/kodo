@@ -40,7 +40,7 @@ func init() {
 
 	rcommand.MarkFlagRequired("server")
 	rcommand.AddCommand(buildCommand)
-	rcommand.PersistentFlags().StringVarP(&envVar.Source, "source", "o", "github.com", "github repo which has docker image")
+	rcommand.PersistentFlags().StringVarP(&deployVar.Source, "source", "o", "github.com", "github repo which has docker image")
 }
 
 func main() {
@@ -61,7 +61,7 @@ var buildCommand = &cobra.Command{
 	Use: "build",
 	Run: func(cm *cobra.Command, args []string) {
 		fmt.Println("Building image from docker file at source")
-		err := cmd.Build(envVar)
+		err := cmd.Build(envVar, deployVar)
 		if err == nil {
 			fmt.Println("Build Over")
 		} else {
