@@ -10,6 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+//DeploymentVariables - variables associated with deployment
 type DeploymentVariables struct { //New struct for deployment creation variables
 	Image    string
 	Replicas int32
