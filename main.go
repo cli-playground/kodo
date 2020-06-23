@@ -70,7 +70,7 @@ var buildCommand = &cobra.Command{
 		fmt.Println("Building image from docker file at source")
 		err := cmd.BuildDockerFile(envVar, deployVar)
 		if err == nil {
-			fmt.Println("BuildConfig and ImageStrem Created Successfully, Build can now be Started.")
+			fmt.Println("BuildConfig and ImageStream Created Successfully, Build can now be Started")
 		} else {
 			fmt.Println(err)
 		}
