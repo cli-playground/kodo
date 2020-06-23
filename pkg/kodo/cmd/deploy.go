@@ -7,14 +7,13 @@ import (
 
 	"github.com/dchest/uniuri"
 	routev1 "github.com/openshift/api/route/v1"
-	routev1client "github.com/openshift/client-go/route/clientset/versioned/typed/route/v1"
+	rv1 "github.com/openshift/client-go/route/clientset/versioned/typed/route/v1"
 	appsv1 "k8s.io/api/apps/v1" //  alias this as appsv1
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	intstr "k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/client-go/kubernetes"
-
-	"k8s.io/client-go/rest"
+	v1 "k8s.io/client-go/kubernetes/typed/apps/v1"
+	cv1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
 type DeploymentVariables struct { //New struct for deployment creation variables
@@ -35,13 +34,13 @@ func GenerateUniqueIdentifiers() *DeploymentIdentifiers { // function to generat
 	return &deploymentIDs
 }
 
-func Deploy(client *kubernetes.Clientset, deployVar *DeploymentVariables, envVar *EnvironmentVariables, deploymentID *DeploymentIdentifiers) (*appsv1.Deployment, error) {
+func Deploy(client v1.AppsV1Interface, deployVar *DeploymentVariables, envVar *EnvironmentVariables, deploymentID *DeploymentIdentifiers) (*appsv1.Deployment, error) {
 
 	deploymentObj := &appsv1.Deployment{
 		ObjectMeta: ObjectMeta(deploymentID.DeploymentIdentifierName),
 		Spec:       DeploymentSpec(deployVar.Replicas, deploymentID.DeploymentIdentifierName, deployVar.Image, deployVar.Port),
 	}
-	deploymentPointer, deploymentError := client.AppsV1().Deployments(envVar.Namespace).Create(context.TODO(), deploymentObj, metav1.CreateOptions{})
+	deploymentPointer, deploymentError := client.Deployments(envVar.Namespace).Create(context.TODO(), deploymentObj, metav1.CreateOptions{})
 
 	if deploymentError == nil {
 		fmt.Printf("\nDeployment created")
@@ -51,13 +50,13 @@ func Deploy(client *kubernetes.Clientset, deployVar *DeploymentVariables, envVar
 
 }
 
-func Service(client *kubernetes.Clientset, deployVar *DeploymentVariables, envVar *EnvironmentVariables, deploymentID *DeploymentIdentifiers) (*corev1.Service, error) {
+func Service(client cv1.CoreV1Interface, deployVar *DeploymentVariables, envVar *EnvironmentVariables, deploymentID *DeploymentIdentifiers) (*corev1.Service, error) {
 
 	svc := &corev1.Service{
 		ObjectMeta: ObjectMeta(deploymentID.DeploymentIdentifierName),
 		Spec:       ServiceSpec(deployVar.Port, deploymentID.DeploymentIdentifierName),
 	}
-	servicePointer, serviceError := client.CoreV1().Services(envVar.Namespace).Create(context.TODO(), svc, metav1.CreateOptions{})
+	servicePointer, serviceError := client.Services(envVar.Namespace).Create(context.TODO(), svc, metav1.CreateOptions{})
 	if serviceError == nil {
 		fmt.Printf("\nService created")
 	}
@@ -65,25 +64,11 @@ func Service(client *kubernetes.Clientset, deployVar *DeploymentVariables, envVa
 
 }
 
-func Route(client *kubernetes.Clientset, deployVar *DeploymentVariables, envVar *EnvironmentVariables, svc *corev1.Service, deploymentID *DeploymentIdentifiers) (*routev1.Route, error) {
+func Route(routeClient rv1.RouteV1Interface, deployVar *DeploymentVariables, envVar *EnvironmentVariables, svc *corev1.Service, deploymentID *DeploymentIdentifiers) (*routev1.Route, error) {
 
 	routeObj := &routev1.Route{
 		ObjectMeta: ObjectMeta(deploymentID.DeploymentIdentifierName),
 		Spec:       RouteSpec(deployVar.Port, svc.Name),
-	}
-
-	config := rest.Config{
-		Host:        envVar.Host,
-		BearerToken: envVar.Bearertoken,
-		TLSClientConfig: rest.TLSClientConfig{
-			Insecure: true,
-		},
-	}
-
-	routeClient, routev1ClientError := routev1client.NewForConfig(&config)
-
-	if routev1ClientError != nil {
-		return nil, routev1ClientError
 	}
 
 	routePointer, routeClientError := routeClient.Routes(envVar.Namespace).Create(context.TODO(), routeObj, metav1.CreateOptions{})

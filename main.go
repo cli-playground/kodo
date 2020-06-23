@@ -75,17 +75,22 @@ var deployCommand = &cobra.Command{
 		if clientError != nil {
 			log.Fatal(clientError)
 		} else {
-			_, deployError := cmd.Deploy(client, deployVar, envVar, deploymentID)
+			_, deployError := cmd.Deploy(client.AppsV1(), deployVar, envVar, deploymentID)
 			if deployError != nil {
 				log.Fatal(deployError)
 			} else {
-				serviceObj, serviceObjError := cmd.Service(client, deployVar, envVar, deploymentID)
+				serviceObj, serviceObjError := cmd.Service(client.CoreV1(), deployVar, envVar, deploymentID)
 				if serviceObjError != nil {
 					log.Fatal(serviceObjError)
 				} else {
-					_, routeError := cmd.Route(client, deployVar, envVar, serviceObj, deploymentID)
-					if routeError != nil {
-						log.Fatal(routeError)
+					routeClient, routev1ClientError := cmd.NewRouteClient(envVar)
+					if routev1ClientError != nil {
+						log.Fatal(routev1ClientError)
+					} else {
+						_, routeError := cmd.Route(routeClient, deployVar, envVar, serviceObj, deploymentID)
+						if routeError != nil {
+							log.Fatal(routeError)
+						}
 					}
 				}
 			}

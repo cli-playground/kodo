@@ -6,11 +6,13 @@ import (
 	"testing"
 
 	routev1 "github.com/openshift/api/route/v1"
+	fakeRouteClientset "github.com/openshift/client-go/route/clientset/versioned/fake"
 	appsv1 "k8s.io/api/apps/v1" //  alias this as appsv1
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	intstr "k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
+	fakeKubeClientset "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -241,146 +243,172 @@ func TestRouteSpec(t *testing.T) {
 
 }
 
-// func TestDeploy(t *testing.T) {
+func TestDeploy(t *testing.T) {
 
-// 	var deployVar = DeploymentVariables{
-// 		Image:    "openshift/hello-openshift:latest",
-// 		Replicas: 11,
-// 		Port:     8080,
-// 	}
+	var deployVar = DeploymentVariables{
+		Image:    "openshift/hello-openshift:latest",
+		Replicas: 11,
+		Port:     8080,
+	}
 
-// 	var envVar = EnvironmentVariables{
-// 		Host:        "",
-// 		Bearertoken: "",
-// 		Namespace:   "jaideep-test-june-22",
-// 	}
+	var envVar = EnvironmentVariables{
+		Host:        "",
+		Bearertoken: "",
+		Namespace:   "jaideep-test-june-23",
+	}
 
-// 	client, _ := GetClientSet()
-// 	// client := fake.()
+	deploymentID := GenerateUniqueIdentifiers()
 
-// 	deploymentID := GenerateUniqueIdentifiers()
+	got, err := Deploy(fakeKubeClientset.NewSimpleClientset().AppsV1(), &deployVar, &envVar, deploymentID)
 
-// 	got, err := Deploy(client, &deployVar, &envVar, deploymentID)
+	want := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: deploymentID.DeploymentIdentifierName,
+		},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: &deployVar.Replicas,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": deploymentID.DeploymentIdentifierName,
+				},
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"app": deploymentID.DeploymentIdentifierName,
+					},
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:  deploymentID.DeploymentIdentifierName,
+							Image: deployVar.Image, // should come from flag
+							Ports: []corev1.ContainerPort{
+								{
+									Name:          "http",
+									Protocol:      corev1.ProtocolTCP,
+									ContainerPort: deployVar.Port, // should come from flag
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
 
-// 	want := &appsv1.Deployment{
-// 		ObjectMeta: metav1.ObjectMeta{
-// 			Name: deploymentID.DeploymentIdentifierName,
-// 		},
-// 		Spec: appsv1.DeploymentSpec{
-// 			Replicas: &deployVar.Replicas,
-// 			Selector: &metav1.LabelSelector{
-// 				MatchLabels: map[string]string{
-// 					"app": deploymentID.DeploymentIdentifierName,
-// 				},
-// 			},
-// 			Template: corev1.PodTemplateSpec{
-// 				ObjectMeta: metav1.ObjectMeta{
-// 					Labels: map[string]string{
-// 						"app": deploymentID.DeploymentIdentifierName,
-// 					},
-// 				},
-// 				Spec: corev1.PodSpec{
-// 					Containers: []corev1.Container{
-// 						{
-// 							Name:  deploymentID.DeploymentIdentifierName,
-// 							Image: deployVar.Image, // should come from flag
-// 							Ports: []corev1.ContainerPort{
-// 								{
-// 									Name:          "http",
-// 									Protocol:      corev1.ProtocolTCP,
-// 									ContainerPort: deployVar.Port, // should come from flag
-// 								},
-// 							},
-// 						},
-// 					},
-// 				},
-// 			},
-// 		},
-// 	}
+	if err != nil {
+		log.Fatal(err)
+	} else if got.ObjectMeta.Name != want.ObjectMeta.Name {
+		log.Fatal("object meta mismatch ")
+	} else if *got.Spec.Replicas != *want.Spec.Replicas {
+		log.Fatal("replica count mismatch")
+	} else if got.Spec.Selector.MatchLabels["app"] != want.Spec.Selector.MatchLabels["app"] {
+		log.Fatal("selector name mismatch")
+	} else if got.Spec.Template.ObjectMeta.Labels["app"] != got.Spec.Template.ObjectMeta.Labels["app"] {
+		log.Fatal("Object meta label mismatch")
+	} else if got.Spec.Template.Spec.Containers[0].Name != want.Spec.Template.Spec.Containers[0].Name {
+		log.Fatal("container name mismatch")
+	} else if got.Spec.Template.Spec.Containers[0].Image != want.Spec.Template.Spec.Containers[0].Image {
+		log.Fatal("container image mismatch")
+	} else if got.Spec.Template.Spec.Containers[0].Ports[0].ContainerPort != want.Spec.Template.Spec.Containers[0].Ports[0].ContainerPort {
+		log.Fatal("container port mismatch")
+	}
 
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	} else if got != want {
-// 		log.Fatal("deployment mismatch")
-// 	}
+}
 
-// }
+func TestService(t *testing.T) {
 
-// func TestService(t *testing.T) {
+	var deployVar = DeploymentVariables{
+		Image:    "openshift/hello-openshift:latest",
+		Replicas: 11,
+		Port:     8080,
+	}
 
-// 	var deployVar = DeploymentVariables{
-// 		Image:    "openshift/hello-openshift:latest",
-// 		Replicas: 11,
-// 		Port:     8080,
-// 	}
+	var envVar = EnvironmentVariables{
+		Host:        "",
+		Bearertoken: "",
+		Namespace:   "jaideep-test-june-22",
+	}
 
-// 	var envVar = EnvironmentVariables{
-// 		Host:        "",
-// 		Bearertoken: "",
-// 		Namespace:   "jaideep-test-june-22",
-// 	}
+	deploymentID := GenerateUniqueIdentifiers()
 
-// 	client, _ := GetClientSet()
-// 	// client := testclient.NewSimpleClientset(Create("jaideep-test-june-22"))
+	got, err := Service(fakeKubeClientset.NewSimpleClientset().CoreV1(), &deployVar, &envVar, deploymentID)
 
-// 	deploymentID := GenerateUniqueIdentifiers()
+	want := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: deploymentID.DeploymentIdentifierName,
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{
+				{
+					Port:       80, // use correct datatype, hint: int32
+					Protocol:   corev1.ProtocolTCP,
+					TargetPort: intstr.FromInt(int(deployVar.Port)), // port is to be obtained from the command flag.
+				},
+			},
+			Selector: map[string]string{
+				"app": deploymentID.DeploymentIdentifierName,
+			},
+		},
+	}
 
-// 	got, err := Service(client, &deployVar, &envVar, deploymentID)
+	if err != nil {
+		log.Fatal(err)
+	} else if got.ObjectMeta.Name != want.ObjectMeta.Name {
+		log.Fatal("object meta mismatch ")
+	} else if got.Spec.Ports[0].TargetPort != want.Spec.Ports[0].TargetPort {
+		log.Fatal("Target port mismatch")
+	} else if got.Spec.Selector["apps"] != want.Spec.Selector["apps"] {
+		log.Fatal("selector app mismatch")
+	}
 
-// 	want := &corev1.Service{
-// 		ObjectMeta: ObjectMeta(deploymentID.DeploymentIdentifierName),
-// 		Spec:       ServiceSpec(deployVar.Port, deploymentID.DeploymentIdentifierName),
-// 	}
+}
 
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	} else if got != want {
-// 		log.Fatal("service mismatch")
-// 	}
+func TestRoute(t *testing.T) {
 
-// }
+	var deployVar = DeploymentVariables{
+		Image:    "openshift/hello-openshift:latest",
+		Replicas: 11,
+		Port:     8080,
+	}
 
-// func TestRoute(t *testing.T) {
+	var envVar = EnvironmentVariables{
+		Host:        "",
+		Bearertoken: "",
+		Namespace:   "jaideep-test-june-23",
+	}
 
-// 	var deployVar = DeploymentVariables{
-// 		Image:    "openshift/hello-openshift:latest",
-// 		Replicas: 11,
-// 		Port:     8080,
-// 	}
+	deploymentID := GenerateUniqueIdentifiers()
+	serviceObj, _ := Service(fakeKubeClientset.NewSimpleClientset().CoreV1(), &deployVar, &envVar, deploymentID)
 
-// 	var envVar = EnvironmentVariables{
-// 		Host:        "",
-// 		Bearertoken: "",
-// 		Namespace:   "jaideep-test-june-22",
-// 	}
+	routeFakeClient := fakeRouteClientset.NewSimpleClientset().RouteV1()
 
-// 	client, _ := GetClientSet()
-// 	// client := testclient.NewSimpleClientset(Create("jaideep-test-june-22"))
+	got, err := Route(routeFakeClient, &deployVar, &envVar, serviceObj, deploymentID)
 
-// 	deploymentID := GenerateUniqueIdentifiers()
-// 	serviceObj, _ := Service(client, &deployVar, &envVar, deploymentID)
+	want := &routev1.Route{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: deploymentID.DeploymentIdentifierName,
+		},
+		Spec: routev1.RouteSpec{
+			To: routev1.RouteTargetReference{
+				Kind: "Service",
+				Name: deploymentID.DeploymentIdentifierName,
+			},
+			Port: &routev1.RoutePort{
+				TargetPort: intstr.IntOrString{IntVal: deployVar.Port}, // conventionalPort is 80
+			},
+		},
+	}
 
-// 	got, err := Route(client, &deployVar, &envVar, serviceObj, deploymentID)
+	if err != nil {
+		log.Fatal(err)
+	} else if got.ObjectMeta.Name != want.ObjectMeta.Name {
+		log.Fatal("object meta mismatch ")
+	} else if got.Spec.To.Name != want.Spec.To.Name {
+		log.Fatal("route name mismatch")
+	} else if got.Spec.Port.TargetPort != want.Spec.Port.TargetPort {
+		log.Fatal("Target port mismatch")
+	}
 
-// 	want := &routev1.Route{
-// 		ObjectMeta: metav1.ObjectMeta{
-// 			Name: deploymentID.DeploymentIdentifierName,
-// 		},
-// 		Spec: routev1.RouteSpec{
-// 			To: routev1.RouteTargetReference{
-// 				Kind: "Service",
-// 				Name: deploymentID.DeploymentIdentifierName,
-// 			},
-// 			Port: &routev1.RoutePort{
-// 				TargetPort: intstr.IntOrString{IntVal: deployVar.Port}, // conventionalPort is 80
-// 			},
-// 		},
-// 	}
-
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	} else if got != want {
-// 		log.Fatal("route mismatch ")
-// 	}
-
-// }
+}

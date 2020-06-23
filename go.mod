@@ -4,6 +4,7 @@ go 1.14
 
 require (
 	github.com/dchest/uniuri v0.0.0-20200228104902-7aecb25e1fe5
+	github.com/google/go-cmp v0.3.0
 	github.com/openshift/api v0.0.0-20200605231317-fb2a6ca106ae
 	github.com/openshift/client-go v0.0.0-20200608144219-584632b8fc73
 	github.com/spf13/cobra v1.0.0
