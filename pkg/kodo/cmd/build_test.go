@@ -59,8 +59,6 @@ func getImageStream() imagev1api.ImageStream {
 func TestBuildConfig(t *testing.T) {
 	want := getBuildConfig()
 	got := createBuildConfig("https://github.com/openshift/ruby-hello-world.git")
-	// fmt.Println("Want-----> ", want)
-	// fmt.Println("Got---->", got)
 	if diff := cmp.Diff(want, got); diff != "" {
 		fmt.Println(diff)
 		t.Fatalf("The Build Configs didnt match")
@@ -70,8 +68,6 @@ func TestBuildConfig(t *testing.T) {
 func TestImageStream(t *testing.T) {
 	want := getImageStream()
 	got := createImageStream()
-	// fmt.Println("Want-----> ", want)
-	// fmt.Println("Got---->", got)
 	if diff := cmp.Diff(want, got); diff != "" {
 		fmt.Println(diff)
 		t.Fatalf("The ImageStreams didnt match")

@@ -23,16 +23,11 @@ func createTypeMeta(kind string, APIVersion string) metav1.TypeMeta {
 }
 
 func createObjectType(name string, namespace string) metav1.ObjectMeta {
-	if namespace != "" {
-		return metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		}
-	} else {
-		return metav1.ObjectMeta{
-			Name: name,
-		}
+	return metav1.ObjectMeta{
+		Name:      name,
+		Namespace: namespace,
 	}
+
 }
 
 func createBuildSpec(uri string) buildv1api.BuildConfigSpec {
@@ -95,8 +90,8 @@ func newBuildConfigClient(envVar *EnvironmentVariables) *buildv1clientapi.BuildV
 	return myClientSet
 }
 
-//Build image from dockerfile at github source
-func Build(envVar *EnvironmentVariables, deployVar *DeploymentVariables) error {
+//BuildDockerFile Creates BuildConfig and ImageStream from dockerfile at github source
+func BuildDockerFile(envVar *EnvironmentVariables, deployVar *DeploymentVariables) error {
 	buildclient := newBuildConfigClient(envVar)
 	buildconfig := createBuildConfig(deployVar.Source)
 
