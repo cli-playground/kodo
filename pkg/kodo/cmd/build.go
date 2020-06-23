@@ -52,11 +52,11 @@ func createBuildSpec(uri string) buildv1api.BuildConfigSpec {
 	}
 }
 
-func createBuildConfig(sourceUrl string) buildv1api.BuildConfig {
+func createBuildConfig(envVar *EnvironmentVariables, deployVar *DeploymentVariables) buildv1api.BuildConfig {
 	return buildv1api.BuildConfig{
 		TypeMeta:   createTypeMeta("BuildConfig", "build.openshift.io/v1"),
-		ObjectMeta: createObjectType("my-app-docker-build", ""),
-		Spec:       createBuildSpec(sourceUrl),
+		ObjectMeta: createObjectType("my-app-docker-build", envVar.Namespace),
+		Spec:       createBuildSpec(deployVar.Source),
 	}
 }
 
@@ -93,7 +93,7 @@ func newBuildConfigClient(envVar *EnvironmentVariables) *buildv1clientapi.BuildV
 // BuildDockerFile : creates new BuildConfig and ImageStream from Dockerfile in github repo
 func BuildDockerFile(envVar *EnvironmentVariables, deployVar *DeploymentVariables) error {
 	buildclient := newBuildConfigClient(envVar)
-	buildconfig := createBuildConfig(deployVar.Source)
+	buildconfig := createBuildConfig(envVar, deployVar)
 
 	imagestreamclient := newImageStreamClient(envVar)
 	imagestream := createImageStream(envVar)
