@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	routev1client "github.com/openshift/client-go/route/clientset/versioned/typed/route/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -13,7 +14,7 @@ type EnvironmentVariables struct {
 	Bearertoken string
 }
 
-func newOpenShiftClient(envVar *EnvironmentVariables) (*kubernetes.Clientset, error) {
+func NewOpenShiftClient(envVar *EnvironmentVariables) (*kubernetes.Clientset, error) {
 	config := rest.Config{
 		Host:        envVar.Host,
 		BearerToken: envVar.Bearertoken,
@@ -22,4 +23,22 @@ func newOpenShiftClient(envVar *EnvironmentVariables) (*kubernetes.Clientset, er
 		},
 	}
 	return kubernetes.NewForConfig(&config)
+}
+
+func NewRouteClient(envVar *EnvironmentVariables) (*routev1client.RouteV1Client, error) {
+	config := rest.Config{
+		Host:        envVar.Host,
+		BearerToken: envVar.Bearertoken,
+		TLSClientConfig: rest.TLSClientConfig{
+			Insecure: true,
+		},
+	}
+
+	routeClient, routev1ClientError := routev1client.NewForConfig(&config)
+
+	if routev1ClientError != nil {
+		return nil, routev1ClientError
+	}
+
+	return routeClient, routev1ClientError
 }

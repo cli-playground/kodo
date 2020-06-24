@@ -10,7 +10,7 @@ import (
 
 //List is a function to list number of pods in the cluster
 func List(envVar *EnvironmentVariables) error {
-	client, clientError := newOpenShiftClient(envVar)
+	client, clientError := NewOpenShiftClient(envVar)
 
 	if clientError != nil {
 		log.Fatal(clientError)
