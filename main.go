@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/cli-playground/kodo/pkg/kodo/cmd"
 	"github.com/spf13/cobra"
@@ -72,7 +73,7 @@ var buildCommand = &cobra.Command{
 		if err == nil {
 			fmt.Println("BuildConfig and ImageStream Created Successfully, Build can now be Started")
 		} else {
-			fmt.Println(err)
+			log.Fatal(err)
 		}
 	},
 }
