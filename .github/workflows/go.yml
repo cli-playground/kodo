@@ -22,14 +22,15 @@ jobs:
     - name: Check out code into the Go module directory
       uses: actions/checkout@v2
 
-    - name: Get dependencies
+    - name: Check go mod status
       run: |
-        go get -v -t -d ./...
-        if [ -f Gopkg.toml ]; then
-            curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-            dep ensure
+        go mod tidy
+        if [[ ! -z $(git status -s) ]]
+        then
+          echo "Go mod state is not clean"
+          exit 1
         fi
-
+        
     - name: Build main
       run: go build main.go
 
@@ -45,12 +46,5 @@ jobs:
           echo "not well formatted sources are found"
           exit 1
         fi
-    - name: Check go mod status
-      run: |
-        go mod tidy
-        if [[ ! -z $(git status -s) ]]
-        then
-          echo "Go mod state is not clean"
-          exit 1
-        fi
+   
 
