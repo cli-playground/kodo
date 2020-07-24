@@ -30,13 +30,17 @@ jobs:
           echo "Go mod state is not clean"
           exit 1
         fi
-        
+
     - name: Build main
-      run: go build main.go
+      run: |
+        go build main.go
+        go status -s
 
     - name: Run Go Tests
-      run: go test ./...
-    
+      run: |
+        go test ./...
+        go status -s
+
     - name: Check format
       run: |
         go fmt -x ./...
