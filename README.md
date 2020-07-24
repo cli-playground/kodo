@@ -37,3 +37,4 @@ Before running commands, Set Path to $HOME/kodo/bin/.
 
 5. version : Command to check current version \
     `kodo version`
+    
